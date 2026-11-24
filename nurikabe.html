@@ -1,0 +1,684 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Nurikabe</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --paper:#E4EBE9; --panel:#F3F6F4; --ink:#17262E; --muted:#58696E; --rule:#C3CFCC;
+  --grid:#AFC0BD; --land:#FBFAF6; --land-hover:#EEF3F1; --sea:#1E4D66; --sea-hover:#2A607D;
+  --dot:#7C8E93; --good:#17824A; --bad-ink:#B3261E;
+  --bad-tint:rgba(235,50,50,.36); --orphan-tint:rgba(225,45,45,.13);
+  --focus:#C77A00; --btn:#17262E; --btn-ink:#F3F6F4;
+  --num:"Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
+  --ui:"Zen Kaku Gothic New", "Hiragino Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --paper:#0E191E; --panel:#14232A; --ink:#E2EBE8; --muted:#8EA2A5; --rule:#243840;
+    --grid:#2B414A; --land:#1B2B32; --land-hover:#22363E; --sea:#5E98B6; --sea-hover:#74AAC6;
+    --dot:#7F969B; --good:#4CC883; --bad-ink:#FF7B70;
+    --bad-tint:rgba(255,60,60,.32); --orphan-tint:rgba(255,80,80,.16);
+    --focus:#F0B44C; --btn:#E2EBE8; --btn-ink:#0E191E;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#0E191E; --panel:#14232A; --ink:#E2EBE8; --muted:#8EA2A5; --rule:#243840;
+  --grid:#2B414A; --land:#1B2B32; --land-hover:#22363E; --sea:#5E98B6; --sea-hover:#74AAC6;
+  --dot:#7F969B; --good:#4CC883; --bad-ink:#FF7B70;
+  --bad-tint:rgba(255,60,60,.32); --orphan-tint:rgba(255,80,80,.16);
+  --focus:#F0B44C; --btn:#E2EBE8; --btn-ink:#0E191E;
+}
+/* Colorblind-safe palette (Okabe–Ito blue / orange) plus shape cues */
+body.cb{ --good:#0072B2; --bad-ink:#D55E00; --bad-tint:rgba(230,159,0,.6); --orphan-tint:rgba(230,159,0,.22); }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) body.cb{ --good:#56B4E9; --bad-ink:#F0A030; --bad-tint:rgba(240,160,40,.6); } }
+:root[data-theme="dark"] body.cb{ --good:#56B4E9; --bad-ink:#F0A030; --bad-tint:rgba(240,160,40,.6); }
+
+html{ height:100%; }
+body{ margin:0; min-height:100%; background:var(--paper); color:var(--ink); font-family:var(--ui); font-size:16px; line-height:1.55; }
+.wrap{ max-width:1040px; margin:0 auto; padding:28px 20px 40px; display:grid; grid-template-columns:290px 1fr; gap:40px; align-items:start; }
+@media (max-width:820px){ .wrap{ grid-template-columns:1fr; gap:20px; padding:16px 14px 32px; } }
+
+header h1{ font-family:var(--num); font-weight:800; font-size:44px; line-height:1; margin:0; letter-spacing:.01em; }
+header .kana{ font-family:var(--num); font-weight:600; font-size:15px; color:var(--muted); margin:8px 0 0; }
+header p.tag{ margin:14px 0 0; color:var(--muted); max-width:30ch; }
+
+.side{ display:flex; flex-direction:column; gap:22px; }
+.group{ display:flex; flex-direction:column; gap:8px; }
+.group > .lbl{ font-size:14px; font-weight:700; color:var(--ink); }
+.seg{ display:flex; border:1.5px solid var(--ink); border-radius:6px; overflow:hidden; }
+.seg button{ flex:1; border:0; background:transparent; color:var(--ink); font:500 15px var(--ui); padding:8px 0; cursor:pointer; min-width:0; }
+.seg button + button{ border-left:1.5px solid var(--ink); }
+.seg button[aria-pressed="true"]{ background:var(--ink); color:var(--panel); }
+.seg button:hover:not([aria-pressed="true"]){ background:var(--land-hover); }
+.btn{ font:700 15px var(--ui); border-radius:6px; padding:10px 14px; cursor:pointer; border:1.5px solid var(--ink); background:transparent; color:var(--ink); }
+.btn.primary{ background:var(--btn); color:var(--btn-ink); }
+.btn:hover{ filter:brightness(1.08); }
+.btn:disabled,.seg button:disabled{ opacity:.45; cursor:default; }
+button:focus-visible,.board:focus-visible,summary:focus-visible,input:focus-visible + .sw{ outline:3px solid var(--focus); outline-offset:2px; }
+
+.toggle{ display:flex; align-items:center; gap:10px; cursor:pointer; font-size:15px; user-select:none; }
+.toggle input{ position:absolute; opacity:0; width:1px; height:1px; }
+.sw{ width:38px; height:22px; border-radius:11px; background:var(--rule); position:relative; flex:none; transition:background .15s; }
+.sw::after{ content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:var(--panel); transition:transform .15s; }
+.toggle input:checked + .sw{ background:var(--sea); }
+.toggle input:checked + .sw::after{ transform:translateX(16px); }
+
+details{ border-top:1px solid var(--rule); padding-top:14px; font-size:15px; }
+summary{ cursor:pointer; font-weight:700; }
+details ul{ padding-left:18px; margin:10px 0 0; }
+details li{ margin:4px 0; }
+details p{ margin:10px 0 0; color:var(--muted); }
+kbd{ font:500 13px var(--ui); border:1px solid var(--rule); border-bottom-width:2px; border-radius:4px; padding:0 5px; background:var(--panel); }
+
+.main{ display:flex; flex-direction:column; align-items:center; gap:14px; min-width:0; }
+.meta{ width:100%; max-width:560px; display:flex; justify-content:space-between; align-items:baseline; font-size:15px; color:var(--muted); }
+.meta strong{ color:var(--ink); font-weight:700; }
+.timer{ font-variant-numeric:tabular-nums; }
+.board-wrap{ position:relative; width:100%; max-width:560px; }
+.board{ --n:7; display:grid; grid-template-columns:repeat(var(--n),minmax(0,1fr)); grid-template-rows:repeat(var(--n),minmax(0,1fr)); gap:1px; background:var(--grid);
+  border:2.5px solid var(--ink); border-radius:3px; aspect-ratio:1; touch-action:none; user-select:none; -webkit-user-select:none; outline:none; }
+.cell{ position:relative; background:var(--land); display:flex; align-items:center; justify-content:center; cursor:pointer; font-size:var(--fs,22px); }
+.cell:hover{ background:var(--land-hover); }
+.cell.s{ background:var(--sea); }
+.cell.s:hover{ background:var(--sea-hover); }
+.cell.d::before{ content:""; width:18%; height:18%; border-radius:50%; background:var(--dot); }
+.cell.clue{ cursor:default; font-family:var(--num); font-weight:800; color:var(--ink); }
+.cell.clue:hover{ background:var(--land); }
+.cell.clue.ok{ color:var(--good); }
+.cell.clue.err{ color:var(--bad-ink); }
+.cell.s.bad{ background:linear-gradient(var(--bad-tint),var(--bad-tint)), var(--sea); }
+.cell.orphan{ background:linear-gradient(var(--orphan-tint),var(--orphan-tint)), var(--land); }
+body.cb .cell.s.bad{ background:repeating-linear-gradient(45deg, var(--bad-tint) 0 5px, transparent 5px 10px), var(--sea); }
+body.cb .cell.orphan{ background:repeating-linear-gradient(45deg, var(--orphan-tint) 0 5px, transparent 5px 10px), var(--land); }
+body.cb .cell.clue.ok::after, body.cb .cell.clue.err::after{ content:""; position:absolute; inset:14%; border-radius:50%; border:2px solid currentColor; }
+body.cb .cell.clue.err::after{ border-style:dashed; }
+.cell.cur{ box-shadow:inset 0 0 0 3px var(--focus); }
+.board:not(:focus-visible) .cell.cur{ box-shadow:none; }
+
+.overlay{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column; gap:12px;
+  background:color-mix(in srgb, var(--paper) 82%, transparent); font-weight:500; text-align:center; padding:20px; }
+.overlay.on{ display:flex; }
+.spin{ width:28px; height:28px; border-radius:50%; border:3px solid var(--rule); border-top-color:var(--sea); animation:sp 0.9s linear infinite; }
+@keyframes sp{ to{ transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce){ .spin{ animation:none; border-top-color:var(--rule); } .sw,.sw::after{ transition:none; } }
+
+.actions{ width:100%; max-width:560px; display:flex; flex-wrap:wrap; gap:8px; }
+.actions .btn.primary{ flex:1 1 160px; }
+.actions .btn{ flex:0 1 auto; }
+.msg{ width:100%; max-width:560px; min-height:1.6em; font-size:15px; }
+.msg.win{ color:var(--good); font-weight:700; }
+.msg.warn{ color:var(--bad-ink); }
+.msg.note{ color:var(--muted); }
+@media (max-width:820px){ .side{ display:contents; } .side > header{ order:0; } .main{ order:1; } .side > :not(header){ order:2; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside class="side">
+    <header>
+      <h1>Nurikabe</h1>
+      <p class="kana">ぬりかべ</p>
+      <p class="tag">Shade the stream. Leave the islands.</p>
+    </header>
+
+    <div class="group">
+      <span class="lbl" id="sizeLbl">Grid size</span>
+      <div class="seg" id="sizes" role="group" aria-labelledby="sizeLbl"></div>
+    </div>
+    <div class="group">
+      <span class="lbl" id="diffLbl">Difficulty</span>
+      <div class="seg" id="diffs" role="group" aria-labelledby="diffLbl">
+        <button data-d="easy">Easy</button><button data-d="medium">Medium</button><button data-d="hard">Hard</button>
+      </div>
+    </div>
+    <button class="btn primary" id="newBtn">New puzzle</button>
+
+    <div class="group">
+      <label class="toggle"><input type="checkbox" id="cbToggle"><span class="sw"></span>Colorblind mode</label>
+      <label class="toggle"><input type="checkbox" id="liveToggle"><span class="sw"></span>Flag 2×2 pools as I play</label>
+    </div>
+
+    <details>
+      <summary>How to play</summary>
+      <ul>
+        <li>Each number sits in an island of exactly that many cells.</li>
+        <li>Every island holds one number, and islands never touch side to side.</li>
+        <li>All shaded cells form one connected stream.</li>
+        <li>The stream never fills a 2×2 square.</li>
+      </ul>
+      <ul>
+        <li>Click or tap a cell to cycle: stream, dot, empty.</li>
+        <li>Right-click to place a dot. Drag to paint several cells.</li>
+        <li>Keyboard: arrows move, <kbd>Space</kbd> cycles, <kbd>S</kbd> stream, <kbd>D</kbd> dot, <kbd>Backspace</kbd> clears, <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes.</li>
+      </ul>
+      <p>Dots are optional notes for cells you know are island. A number turns green once its island is walled off at the right size.</p>
+    </details>
+  </aside>
+
+  <main class="main">
+    <div class="meta"><span id="metaTxt"><strong>Loading</strong></span><span class="timer" id="timer">0:00</span></div>
+    <div class="board-wrap">
+      <div class="board" id="board" tabindex="0" role="grid" aria-label="Nurikabe board"></div>
+      <div class="overlay" id="overlay"><div class="spin"></div><div id="overlayTxt">Building a puzzle</div></div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="checkBtn">Check solution</button>
+      <button class="btn" id="undoBtn">Undo</button>
+      <button class="btn" id="redoBtn">Redo</button>
+      <button class="btn" id="clearBtn">Clear</button>
+      <button class="btn" id="revealBtn">Show solution</button>
+    </div>
+    <div class="msg note" id="msg" role="status" aria-live="polite"></div>
+  </main>
+</div>
+<script>
+// ===== Nurikabe engine: generator + logical solver/grader =====
+const NK = (() => {
+  function rnd(n){ return Math.floor(Math.random()*n); }
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];} return a; }
+  function nbrs(W,H){
+    const nb=[]; for(let y=0;y<H;y++)for(let x=0;x<W;x++){const l=[];
+      if(x>0)l.push(y*W+x-1); if(x<W-1)l.push(y*W+x+1); if(y>0)l.push((y-1)*W+x); if(y<H-1)l.push((y+1)*W+x); nb.push(l);}
+    return nb;
+  }
+  function blocks(W,H){ const b=[]; for(let y=0;y<H-1;y++)for(let x=0;x<W-1;x++){const i=y*W+x;b.push([i,i+1,i+W,i+W+1]);} return b; }
+
+  // ---------- solution generator ----------
+  function genSolution(W,H,maxIsl,pGrow,growSteps){
+    const N=W*H, nb=nbrs(W,H), bl=blocks(W,H);
+    const isl=new Int16Array(N).fill(-1); const sizes=[]; let blackCount=N;
+    const seen=new Int32Array(N); let stamp=0;
+    function connectedWithout(c){
+      let start=-1; for(let i=0;i<N;i++) if(isl[i]<0&&i!==c){start=i;break;}
+      if(start<0) return false;
+      stamp++; const st=[start]; seen[start]=stamp; let cnt=1;
+      while(st.length){const i=st.pop(); for(const j of nb[i]) if(j!==c&&isl[j]<0&&seen[j]!==stamp){seen[j]=stamp;cnt++;st.push(j);} }
+      return cnt===blackCount-1;
+    }
+    function tryCell(c){
+      const adj=new Set(); for(const j of nb[c]) if(isl[j]>=0) adj.add(isl[j]);
+      if(adj.size>1) return false;
+      let id=-1; if(adj.size===1){ id=[...adj][0]; if(sizes[id]>=maxIsl) return false; }
+      if(!connectedWithout(c)) return false;
+      if(id<0){ id=sizes.length; sizes.push(0); }
+      isl[c]=id; sizes[id]++; blackCount--; return true;
+    }
+    for(let guard=0;guard<N*4;guard++){
+      const cand=new Set();
+      for(const b of bl) if(b.every(i=>isl[i]<0)) b.forEach(i=>cand.add(i));
+      if(!cand.size) break;
+      let arr=shuffle([...cand]);
+      if(Math.random()<pGrow){ // prefer growing existing islands
+        const g=arr.filter(c=>nb[c].some(j=>isl[j]>=0)), s=arr.filter(c=>!nb[c].some(j=>isl[j]>=0));
+        arr=g.concat(s);
+      }
+      let ok=false; for(const c of arr) if(tryCell(c)){ok=true;break;}
+      if(!ok) return null;
+    }
+    for(const b of bl) if(b.every(i=>isl[i]<0)) return null;
+    const targetWhite=Math.round(growSteps*N);
+    for(let s=0;s<N*2 && N-blackCount<targetWhite;s++){
+      const cand=[]; for(let i=0;i<N;i++) if(isl[i]<0 && nb[i].some(j=>isl[j]>=0)) cand.push(i);
+      shuffle(cand); let ok=false; for(const c of cand.slice(0,8)){ if(tryCell(c)){ok=true;break;} }
+      if(!ok) break;
+    }
+    if(blackCount<2) return null;
+    return {isl,sizes};
+  }
+
+  // ---------- solver ----------
+  function makeSolver(W,H,clues){
+    const N=W*H, nb=nbrs(W,H), bl=blocks(W,H);
+    let sumClues=0; for(let i=0;i<N;i++) sumClues+=clues[i];
+    const T=N-sumClues;
+    const comp=new Int32Array(N), seen=new Int32Array(N), dist=new Int32Array(N);
+    let stamp=0;
+
+    function analyze(c){
+      comp.fill(-1); const comps=[];
+      for(let i=0;i<N;i++) if(c[i]===1&&comp[i]<0){
+        const id=comps.length, cells=[i]; comp[i]=id; let clue=0, cc=0;
+        for(let k=0;k<cells.length;k++){const a=cells[k]; if(clues[a]){clue=clues[a];cc++;}
+          for(const j of nb[a]) if(c[j]===1&&comp[j]<0){comp[j]=id;cells.push(j);} }
+        comps.push({cells,clue,cc});
+      }
+      return comps;
+    }
+    // reachable set from clued comp (distance-limited), excluding cell ex
+    function reach(c,comps,id,ex,mark){
+      const C=comps[id]; const r=C.clue-C.cells.length; stamp++; const s=stamp;
+      const q=[]; for(const a of C.cells){seen[a]=s;dist[a]=0;q.push(a);}
+      let count=0;
+      for(let k=0;k<q.length;k++){const a=q[k]; if(dist[a]>=r) continue;
+        for(const j of nb[a]){ if(seen[j]===s||j===ex||c[j]===0) continue;
+          if(c[j]===1 && comp[j]>=0 && comp[j]!==id && comps[comp[j]].cc>0) continue;
+          let bad=false; for(const t of nb[j]) if(c[t]===1&&comp[t]>=0&&comp[t]!==id&&comps[comp[t]].cc>0){bad=true;break;}
+          if(bad) continue;
+          seen[j]=s; dist[j]=dist[a]+1; q.push(j); count++; if(mark) mark[j]=1; }
+      }
+      return count;
+    }
+
+    function tier1(c){
+      let total=0;
+      for(let iter=0;iter<500;iter++){
+        let ch=0, bad=false; const pend=new Int8Array(N).fill(-1); const plist=[];
+        const set=(i,v)=>{ if(c[i]!==-1){ if(c[i]!==v) bad=true; return; } if(pend[i]===-1){pend[i]=v;plist.push(i);} else if(pend[i]!==v) bad=true; };
+        let B=0,Wc=0,U=0; for(let i=0;i<N;i++){ if(c[i]===0)B++; else if(c[i]===1)Wc++; else U++; }
+        if(B>T||Wc>sumClues) return -1;
+        if(U===0){ return validate(c)? total : -1; }
+        if(B===T){ for(let i=0;i<N;i++) if(c[i]===-1) c[i]=1; total++; continue; }
+        if(Wc===sumClues){ for(let i=0;i<N;i++) if(c[i]===-1) c[i]=0; total++; continue; }
+        const comps=analyze(c);
+        for(let id=0;id<comps.length;id++){ const C=comps[id];
+          if(C.cc>1) return -1;
+          if(C.cc===1&&C.cells.length>C.clue) return -1;
+          const libs=new Set(); let stale=false;
+          for(const a of C.cells) for(const j of nb[a]){ if(c[j]===-1) libs.add(j); else if(c[j]===1&&comp[j]!==id) stale=true; }
+          if(stale) continue;
+          if(C.cc===1&&C.cells.length===C.clue){ for(const j of libs) set(j,0); }
+          else { if(libs.size===0) return -1; if(libs.size===1) set([...libs][0],1); }
+        }
+        // joining rule
+        for(let i=0;i<N;i++) if(c[i]===-1){
+          const ids=new Set(); for(const j of nb[i]) if(c[j]===1&&comp[j]>=0) ids.add(comp[j]);
+          if(!ids.size) continue; let cc=0,sz=1,clue=0;
+          for(const id of ids){cc+=comps[id].cc; sz+=comps[id].cells.length; if(comps[id].clue) clue=comps[id].clue;}
+          if(cc>1 || (cc===1&&sz>clue)) set(i,0);
+        }
+        // reachability
+        const R=new Uint8Array(N);
+        for(let id=0;id<comps.length;id++) if(comps[id].cc===1){ for(const a of comps[id].cells) R[a]=1; reach(c,comps,id,-1,R); }
+        for(let i=0;i<N;i++) if(c[i]===-1&&!R[i]) set(i,0);
+        for(const C of comps) if(C.cc===0 && !C.cells.some(a=>R[a])) return -1;
+        // 2x2
+        for(const b of bl){ let k=0,u=-1,nu=0; for(const i of b){ if(c[i]===0)k++; else if(c[i]===-1){nu++;u=i;} }
+          if(k===4) return -1; if(k===3&&nu===1) set(u,1); }
+        // black components
+        const bc=new Int32Array(N).fill(-1); let nbc=0;
+        const bcs=[];
+        for(let i=0;i<N;i++) if(c[i]===0&&bc[i]<0){ const cells=[i]; bc[i]=nbc;
+          for(let k=0;k<cells.length;k++) for(const j of nb[cells[k]]) if(c[j]===0&&bc[j]<0){bc[j]=nbc;cells.push(j);}
+          nbc++; bcs.push(cells); }
+        for(const cells of bcs){
+          if(cells.length<T){ const libs=new Set(); for(const a of cells) for(const j of nb[a]) if(c[j]===-1) libs.add(j);
+            if(libs.size===0) return -1; if(libs.size===1) set([...libs][0],0); }
+        }
+        if(bad) return -1;
+        for(const i of plist) c[i]=pend[i]; ch=plist.length;
+        total+=ch; if(!ch) return total;
+      }
+      return total;
+    }
+
+    function tier2(c){
+      let bad=false; const pend=new Int8Array(N).fill(-1); const plist=[];
+      const set=(i,v)=>{ if(c[i]!==-1){ if(c[i]!==v) bad=true; return; } if(pend[i]===-1){pend[i]=v;plist.push(i);} else if(pend[i]!==v) bad=true; };
+      const comps=analyze(c);
+      // island necessity
+      for(let id=0;id<comps.length;id++){ const C=comps[id]; if(C.cc!==1||C.cells.length>=C.clue) continue;
+        const r=C.clue-C.cells.length; const M=new Uint8Array(N); reach(c,comps,id,-1,M);
+        for(let i=0;i<N;i++) if(M[i]&&c[i]===-1){ if(reach(c,comps,id,i,null)<r) set(i,1); }
+      }
+      // stream connectivity
+      let B=0, first=-1; for(let i=0;i<N;i++) if(c[i]===0){B++; if(first<0) first=i;}
+      if(B>0) for(let x=0;x<N;x++) if(c[x]===-1){
+        stamp++; const s=stamp; const st=[first]; seen[first]=s; let nb0=1, tot=1;
+        while(st.length){const a=st.pop(); for(const j of nb[a]) if(j!==x&&c[j]!==1&&seen[j]!==s){seen[j]=s;st.push(j);tot++; if(c[j]===0)nb0++;}}
+        if(nb0<B||tot<T) set(x,0);
+      }
+      if(bad) return -1; for(const i of plist) c[i]=pend[i]; return plist.length;
+    }
+
+    function prop(c,maxTier){
+      for(let g=0;g<200;g++){
+        if(tier1(c)<0) return -1;
+        if(maxTier<2) return 0;
+        if(!c.includes(-1)) return 0;
+        const r=tier2(c); if(r<0) return -1; if(r===0) return 0;
+      }
+      return 0;
+    }
+
+    function tier3(c,inner){
+      let ch=0;
+      for(let i=0;i<N;i++) if(c[i]===-1 && nb[i].some(j=>c[j]!==-1)){
+        const a=Int8Array.from(c); a[i]=1;
+        if(prop(a,inner)<0){ c[i]=0; ch++; if(tier1(c)<0) return -1; continue; }
+        const b=Int8Array.from(c); b[i]=0;
+        if(prop(b,inner)<0){ c[i]=1; ch++; if(tier1(c)<0) return -1; }
+        if(ch>=1) break;
+      }
+      return ch;
+    }
+
+    function validate(c){
+      for(const b of bl) if(b.every(i=>c[i]===0)) return false;
+      const comps=analyze(c);
+      for(const C of comps) if(C.cc!==1||C.cells.length!==C.clue) return false;
+      let B=0, first=-1; for(let i=0;i<N;i++) if(c[i]===0){B++;if(first<0)first=i;}
+      if(B===0) return true;
+      stamp++; const s=stamp; const st=[first]; seen[first]=s; let k=1;
+      while(st.length){const a=st.pop(); for(const j of nb[a]) if(c[j]===0&&seen[j]!==s){seen[j]=s;k++;st.push(j);}}
+      return k===B;
+    }
+
+    function grade(maxLevel=3){
+      const c=new Int8Array(N).fill(-1); for(let i=0;i<N;i++) if(clues[i]) c[i]=1;
+      let level=1;
+      for(let g=0;g<1000;g++){
+        if(tier1(c)<0) return {ok:false};
+        if(!c.includes(-1)) return validate(c)?{ok:true,level,sol:c}:{ok:false};
+        const stuck=()=>({ok:false,stuck:true,state:c,unknown:c.reduce((k,v)=>k+(v===-1),0),level});
+        if(maxLevel<2) return stuck();
+        let r=tier2(c); if(r<0) return {ok:false}; if(r>0){level=Math.max(level,2);continue;}
+        if(maxLevel<3) return stuck();
+        r=tier3(c,1); if(r<0) return {ok:false};
+        if(r===0){ r=tier3(c,2); if(r<0) return {ok:false}; }
+        if(r>0){level=3;continue;}
+        return {ok:false,stuck:true,state:c,unknown:c.reduce((k,v)=>k+(v===-1),0),level};
+      }
+      return {ok:false};
+    }
+    return {grade,validate};
+  }
+
+  const PARAMS = {
+    easy:   (n)=>({maxIsl: 4+Math.floor((n-5)/2.5), pGrow:0.6, white:0.32, ones:0.10}),
+    medium: (n)=>({maxIsl: 5+Math.floor((n-5)/1.5), pGrow:0.8, white:0.38, ones:0.07}),
+    hard:   (n)=>({maxIsl: 6+Math.floor((n-5)/1.2), pGrow:0.95, white:0.42, ones:0.05}),
+  };
+  const LEVEL={easy:1,medium:2,hard:3};
+
+
+  // validate a solution grid (1 = stream, 0 = island)
+  function solOK(W,H,sol,maxIsl,nb,bl){
+    const N=W*H; for(const b of bl) if(sol[b[0]]&&sol[b[1]]&&sol[b[2]]&&sol[b[3]]) return false;
+    let B=0,first=-1; for(let i=0;i<N;i++) if(sol[i]){B++; if(first<0)first=i;}
+    if(B<2||B>N-2) return false;
+    const seen=new Uint8Array(N); const st=[first]; seen[first]=1; let k=1;
+    while(st.length){const a=st.pop(); for(const j of nb[a]) if(sol[j]&&!seen[j]){seen[j]=1;k++;st.push(j);}}
+    if(k!==B) return false;
+    const isl=new Int16Array(N).fill(-1); const groups=[];
+    for(let i=0;i<N;i++) if(!sol[i]&&isl[i]<0){ const g=[i]; isl[i]=groups.length;
+      for(let q=0;q<g.length;q++) for(const j of nb[g[q]]) if(!sol[j]&&isl[j]<0){isl[j]=groups.length;g.push(j);}
+      if(g.length>maxIsl) return false; groups.push(g); }
+    return groups;
+  }
+  function placeClues(N,groups,old){
+    const clues=new Int32Array(N);
+    for(const g of groups){ const keep=g.filter(i=>old&&old[i]); const at=keep.length?keep[rnd(keep.length)]:g[rnd(g.length)]; clues[at]=g.length; }
+    return clues;
+  }
+  function score(r,target){ if(!r.ok) return r.stuck? 1000+r.unknown : 1e9; return target-r.level; }
+  function shapePenalty(groups,N,p){
+    let ones=0, white=0; for(const g of groups){ white+=g.length; if(g.length===1) ones++; }
+    return 3*Math.max(0,ones-Math.round(p.ones*N)) + Math.max(0,Math.round(p.white*0.85*N)-white);
+  }
+  // generator: yields periodically so the caller can keep the page responsive
+  function* generate(W,H,diff){
+    const N=W*H, nb=nbrs(W,H), bl=blocks(W,H), target=LEVEL[diff];
+    const p=PARAMS[diff](Math.max(W,H));
+    let best=null;
+    for(let restart=0;restart<200;restart++){
+      let s0=null; while(!s0){ s0=genSolution(W,H,p.maxIsl,p.pGrow,p.white); yield; }
+      let sol=new Uint8Array(N); for(let i=0;i<N;i++) sol[i]=s0.isl[i]<0?1:0;
+      let groups=solOK(W,H,sol,p.maxIsl,nb,bl); if(!groups) continue;
+      let clues=placeClues(N,groups,null);
+      let res=makeSolver(W,H,clues).grade(target), sc=score(res,target)+shapePenalty(groups,N,p);
+      const iters = 80 + N*4;
+      for(let it=0; it<iters && sc>0; it++){
+        let v;
+        if(res.stuck && Math.random()<0.85){ const u=[]; for(let i=0;i<N;i++) if(res.state[i]===-1) u.push(i);
+          v=u[rnd(u.length)]; if(Math.random()<0.5){ const n=nb[v]; v=n[rnd(n.length)]; } }
+        else {
+          const singles=groups.filter(g=>g.length===1);
+          if(singles.length>Math.round(p.ones*N) && Math.random()<0.6){ const g=singles[rnd(singles.length)]; const n=nb[g[0]]; v=n[rnd(n.length)]; }
+          else v=rnd(N);
+        }
+        const ns=Uint8Array.from(sol); ns[v]^=1;
+        const g=solOK(W,H,ns,p.maxIsl,nb,bl); if(!g) continue;
+        const nc=placeClues(N,g,clues);
+        const nr=makeSolver(W,H,nc).grade(target), nsc=score(nr,target)+shapePenalty(g,N,p);
+        if(nsc<=sc){ sol=ns; clues=nc; res=nr; sc=nsc; groups=g; }
+        if(it%3===0) yield;
+      }
+      if(res.ok){ const cand={W,H,clues:Array.from(clues),solution:Array.from(sol),level:res.level,sc};
+        if(sc===0) return cand;
+        if(!best || (res.level===target)>(best.level===target) || ((res.level===target)===(best.level===target) && sc<best.sc)) best=cand; }
+      yield {best};
+    }
+    return best;
+  }
+  return {generate, makeSolver, LEVEL};
+})();
+if(typeof module!=='undefined') module.exports=NK;
+
+</script>
+<script>
+(() => {
+  const $ = id => document.getElementById(id);
+  const board=$('board'), msgEl=$('msg');
+  const EMPTY=0, STREAM=1, DOT=2;
+  const LABEL={easy:'easy',medium:'medium',hard:'hard'};
+  let W=7, H=7, N=49, diff='medium', puzzle=null, state=[], cells=[], nb=[];
+  let undo=[], redo=[], stroke=null, cur=0, generating=false;
+  let flags=null;            // result of an explicit check, cleared on edit
+  let solved=false, revealed=false, t0=0, tStop=null, tick=null;
+
+  // ---------- settings ----------
+  const sizes=$('sizes');
+  for(let n=5;n<=10;n++){ const b=document.createElement('button'); b.textContent=n; b.dataset.n=n; b.setAttribute('aria-label',n+' by '+n); sizes.appendChild(b); }
+  function syncSeg(){
+    sizes.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed', +b.dataset.n===W));
+    $('diffs').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.d===diff));
+  }
+  sizes.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||generating) return; W=H=+b.dataset.n; syncSeg(); newPuzzle(); });
+  $('diffs').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||generating) return; diff=b.dataset.d; syncSeg(); newPuzzle(); });
+  $('newBtn').onclick=()=>{ if(!generating) newPuzzle(); };
+  try{ if(localStorage.getItem('nk-cb')==='1'){ $('cbToggle').checked=true; document.body.classList.add('cb'); } }catch(e){}
+  $('cbToggle').onchange=e=>{ document.body.classList.toggle('cb',e.target.checked); try{ localStorage.setItem('nk-cb',e.target.checked?'1':'0'); }catch(_){} };
+  $('liveToggle').onchange=()=>render();
+
+  // ---------- generation ----------
+  async function newPuzzle(){
+    generating=true; setBusy(true);
+    $('overlayTxt').textContent='Building a '+W+'×'+H+' '+LABEL[diff]+' puzzle';
+    const gen=NK.generate(W,H,diff); const start=performance.now(); let res, best=null;
+    while(true){
+      const slice=performance.now();
+      while(performance.now()-slice<14){ res=gen.next(); if(res.done) break; if(res.value&&res.value.best) best=res.value.best; }
+      if(res.done) break;
+      if(performance.now()-start>9000) break;
+      await new Promise(r=>setTimeout(r,0));
+    }
+    let p = res.done ? res.value : best;
+    while(!p){ // extremely unlikely: fall back to any rated puzzle
+      const g=NK.generate(W,H,'easy'); let r; while(!(r=g.next()).done); p=r.value;
+    }
+    generating=false; setBusy(false); load(p);
+  }
+  function setBusy(on){
+    $('overlay').classList.toggle('on',on);
+    document.querySelectorAll('button').forEach(b=>b.disabled=on);
+  }
+
+  function load(p){
+    puzzle=p; W=p.W; H=p.H; N=W*H;
+    state=new Array(N).fill(EMPTY); undo=[]; redo=[]; flags=null; solved=false; revealed=false; cur=0;
+    nb=[]; for(let i=0;i<N;i++){ const x=i%W,y=(i/W)|0,l=[]; if(x>0)l.push(i-1); if(x<W-1)l.push(i+1); if(y>0)l.push(i-W); if(y<H-1)l.push(i+W); nb.push(l); }
+    board.style.setProperty('--n',W); board.innerHTML=''; cells=[];
+    for(let i=0;i<N;i++){ const c=document.createElement('div'); c.className='cell'; c.dataset.i=i; c.setAttribute('role','gridcell');
+      if(p.clues[i]){ c.classList.add('clue'); c.textContent=p.clues[i]; }
+      board.appendChild(c); cells.push(c); }
+    sizeFont();
+    const rated=p.level===NK.LEVEL[diff];
+    const lvl=Object.keys(NK.LEVEL).find(k=>NK.LEVEL[k]===p.level);
+    $('metaTxt').innerHTML='<strong>'+W+'×'+H+'</strong> '+LABEL[lvl];
+    setMsg(rated?'':'No '+LABEL[diff]+' puzzle turned up in time, so this one is rated '+LABEL[lvl]+'. Press New puzzle to try again.','note');
+    t0=performance.now(); tStop=null; clearInterval(tick); tick=setInterval(drawTime,500); drawTime();
+    render();
+  }
+  function sizeFont(){ const w=board.clientWidth||400; board.style.setProperty('--fs', Math.round(w/W*0.52)+'px'); }
+  new ResizeObserver(sizeFont).observe(board);
+  function drawTime(){ const s=Math.floor(((tStop??performance.now())-t0)/1000); $('timer').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+
+  // ---------- analysis ----------
+  // Regions of non-stream cells, each with its clues; used for live green and for checking.
+  function regions(){
+    const reg=new Int32Array(N).fill(-1), list=[];
+    for(let i=0;i<N;i++) if(state[i]!==STREAM&&reg[i]<0){
+      const r={cells:[i],clues:[]}; reg[i]=list.length;
+      for(let k=0;k<r.cells.length;k++){ const a=r.cells[k]; if(puzzle.clues[a]) r.clues.push(a);
+        for(const j of nb[a]) if(state[j]!==STREAM&&reg[j]<0){ reg[j]=list.length; r.cells.push(j); } }
+      list.push(r);
+    }
+    return list;
+  }
+  function pools(){
+    const out=new Set();
+    for(let y=0;y<H-1;y++) for(let x=0;x<W-1;x++){ const i=y*W+x, b=[i,i+1,i+W,i+W+1];
+      if(b.every(k=>state[k]===STREAM)) b.forEach(k=>out.add(k)); }
+    return out;
+  }
+  function streamPieces(){
+    const lab=new Int32Array(N).fill(-1), comps=[];
+    for(let i=0;i<N;i++) if(state[i]===STREAM&&lab[i]<0){ const c=[i]; lab[i]=comps.length;
+      for(let k=0;k<c.length;k++) for(const j of nb[c[k]]) if(state[j]===STREAM&&lab[j]<0){ lab[j]=comps.length; c.push(j); }
+      comps.push(c); }
+    return comps;
+  }
+  function fullCheck(){
+    const regs=regions(), pl=pools(), pieces=streamPieces();
+    const bad=new Set(pl), orphan=new Set(), errClue=new Set();
+    let split=0;
+    if(pieces.length>1){ const big=pieces.reduce((a,b)=>b.length>a.length?b:a); split=pieces.length;
+      for(const p of pieces) if(p!==big) p.forEach(k=>bad.add(k)); }
+    let wrongIslands=0, orphans=0;
+    for(const r of regs){
+      if(r.clues.length===0){ orphans++; r.cells.forEach(k=>orphan.add(k)); }
+      else if(r.clues.length>1 || r.cells.length!==puzzle.clues[r.clues[0]]){ wrongIslands++; r.clues.forEach(k=>errClue.add(k)); }
+    }
+    const nPools=countPools();
+    const ok=!bad.size&&!orphans&&!wrongIslands&&pieces.length===1;
+    return {ok,bad,orphan,errClue,nPools,split,wrongIslands,orphans,noStream:pieces.length===0};
+  }
+  function countPools(){ let n=0; for(let y=0;y<H-1;y++) for(let x=0;x<W-1;x++){ const i=y*W+x; if([i,i+1,i+W,i+W+1].every(k=>state[k]===STREAM)) n++; } return n; }
+
+  // ---------- render ----------
+  function render(){
+    const regs=regions(), okClue=new Set();
+    for(const r of regs) if(r.clues.length===1 && r.cells.length===puzzle.clues[r.clues[0]]) okClue.add(r.clues[0]);
+    const live=$('liveToggle').checked ? pools() : null;
+    for(let i=0;i<N;i++){
+      const c=cells[i], s=state[i];
+      if(puzzle.clues[i]){
+        c.classList.toggle('ok',okClue.has(i));
+        c.classList.toggle('err',!!flags&&flags.errClue.has(i)&&!okClue.has(i));
+        c.setAttribute('aria-label','Clue '+puzzle.clues[i]+(okClue.has(i)?', island complete':''));
+      } else {
+        c.classList.toggle('s',s===STREAM); c.classList.toggle('d',s===DOT);
+        c.classList.toggle('bad', s===STREAM && ((flags&&flags.bad.has(i)) || (live&&live.has(i))));
+        c.classList.toggle('orphan', s!==STREAM && !!flags && flags.orphan.has(i));
+        c.setAttribute('aria-label', s===STREAM?'Stream':s===DOT?'Island dot':'Empty');
+      }
+      c.classList.toggle('cur',i===cur);
+    }
+    $('undoBtn').disabled=generating||!undo.length; $('redoBtn').disabled=generating||!redo.length;
+  }
+  function setMsg(t,kind){ msgEl.textContent=t; msgEl.className='msg '+(kind||'note'); }
+
+  function afterEdit(){
+    flags=null;
+    if(!solved && !revealed){
+      const r=fullCheck();
+      if(r.ok){ solved=true; tStop=performance.now(); drawTime(); setMsg('Solved in '+$('timer').textContent+'. Every island is closed and the stream runs as one.','win'); }
+      else if(msgEl.classList.contains('warn')) setMsg('','note');
+    }
+    render();
+  }
+
+  // ---------- editing ----------
+  function setCell(i,v){ if(puzzle.clues[i]||state[i]===v) return; stroke.push([i,state[i],v]); state[i]=v; }
+  function commit(){ if(stroke&&stroke.length){ undo.push(stroke); redo=[]; afterEdit(); } stroke=null; }
+  const cycle=s=> s===EMPTY?STREAM : s===STREAM?DOT : EMPTY;
+  let paint=null;
+  function cellAt(x,y){ const el=document.elementFromPoint(x,y); const c=el&&el.closest&&el.closest('.cell'); return c&&board.contains(c)? +c.dataset.i : -1; }
+  board.addEventListener('pointerdown',e=>{
+    if(generating||!puzzle) return;
+    const i=cellAt(e.clientX,e.clientY); if(i<0) return;
+    cur=i; if(puzzle.clues[i]){ render(); return; }
+    e.preventDefault(); board.focus({preventScroll:true});
+    const v = e.button===2 ? (state[i]===DOT?EMPTY:DOT) : cycle(state[i]);
+    stroke=[]; paint={v,last:i}; setCell(i,v); flags=null; render();
+    board.setPointerCapture(e.pointerId);
+  });
+  board.addEventListener('pointermove',e=>{
+    if(!paint) return; const i=cellAt(e.clientX,e.clientY);
+    if(i<0||i===paint.last) return; paint.last=i; cur=i; setCell(i,paint.v); render();
+  });
+  const endPaint=()=>{ if(!paint) return; paint=null; commit(); };
+  board.addEventListener('pointerup',endPaint); board.addEventListener('pointercancel',endPaint);
+  board.addEventListener('contextmenu',e=>e.preventDefault());
+
+  board.addEventListener('keydown',e=>{
+    if(generating||!puzzle) return;
+    const x=cur%W, y=(cur/W)|0; let handled=true;
+    const mod=e.ctrlKey||e.metaKey;
+    if(mod&&e.key.toLowerCase()==='z'){ e.shiftKey?doRedo():doUndo(); e.preventDefault(); return; }
+    if(mod&&e.key.toLowerCase()==='y'){ doRedo(); e.preventDefault(); return; }
+    switch(e.key){
+      case 'ArrowLeft': if(x>0)cur--; break;
+      case 'ArrowRight': if(x<W-1)cur++; break;
+      case 'ArrowUp': if(y>0)cur-=W; break;
+      case 'ArrowDown': if(y<H-1)cur+=W; break;
+      case ' ': case 'Enter': stroke=[]; setCell(cur,cycle(state[cur])); commit(); break;
+      case 's': case 'S': case 'x': case 'X': stroke=[]; setCell(cur,state[cur]===STREAM?EMPTY:STREAM); commit(); break;
+      case 'd': case 'D': case '.': stroke=[]; setCell(cur,state[cur]===DOT?EMPTY:DOT); commit(); break;
+      case 'Backspace': case 'Delete': case '0': stroke=[]; setCell(cur,EMPTY); commit(); break;
+      default: handled=false;
+    }
+    if(handled){ e.preventDefault(); render(); }
+  });
+
+  function doUndo(){ const s=undo.pop(); if(!s) return; for(let k=s.length-1;k>=0;k--) state[s[k][0]]=s[k][1]; redo.push(s); afterEdit(); }
+  function doRedo(){ const s=redo.pop(); if(!s) return; for(const [i,,v] of s) state[i]=v; undo.push(s); afterEdit(); }
+  $('undoBtn').onclick=doUndo; $('redoBtn').onclick=doRedo;
+  $('clearBtn').onclick=()=>{ stroke=[]; for(let i=0;i<N;i++) setCell(i,EMPTY); revealed=false; commit(); render(); };
+  $('revealBtn').onclick=()=>{
+    stroke=[]; for(let i=0;i<N;i++) setCell(i, puzzle.solution[i]?STREAM:(state[i]===DOT?DOT:EMPTY));
+    revealed=true; if(!solved){ tStop=performance.now(); drawTime(); }
+    commit(); render(); setMsg('Solution shown. Undo to return to your own attempt.','note');
+  };
+
+  $('checkBtn').onclick=()=>{
+    const r=fullCheck(); flags=r; render();
+    if(r.ok&&revealed){ setMsg('This is the solution. Press New puzzle for another one.','note'); return; }
+    if(r.ok){ if(!solved){ solved=true; tStop=performance.now(); drawTime(); }
+      setMsg('Solved in '+$('timer').textContent+'. Every island is closed and the stream runs as one.','win'); return; }
+    const parts=[];
+    const pl=(n,one,many)=>n+' '+(n===1?one:many);
+    if(r.noStream) parts.push('no stream shaded yet');
+    if(r.nPools) parts.push('the stream fills a 2×2 square in '+pl(r.nPools,'place','places'));
+    if(r.split) parts.push('the stream is split into '+r.split+' pieces');
+    if(r.errClue.size) parts.push(pl(r.errClue.size,'number is','numbers are')+' not yet in a closed island of the right size');
+    if(r.orphans) parts.push(pl(r.orphans,'unshaded area has','unshaded areas have')+' no number');
+    const t=parts.join('; ');
+    setMsg('Not yet: '+t+'.','warn');
+  };
+
+  syncSeg(); newPuzzle();
+})();
+</script>
+</body>
+</html>
