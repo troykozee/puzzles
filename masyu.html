@@ -1,0 +1,679 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Masyu</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Shippori+Mincho+B1:wght@600;800&family=Zen+Kaku+Gothic+New:wght@400;500;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  color-scheme: light;
+  --paper:#E8E7EE; --panel:#F5F4F8; --ink:#1D1B2E; --muted:#615E72; --rule:#CBC8D6;
+  --grid:#D3D0DE; --land:#FCFBFD; --hover:#EFEDF5;
+  --loop:#3A3586; --xmark:#8C88A0; --pearl-ring:#1D1B2E; --pearl-fill:#FCFBFD; --pearl-black:#1D1B2E;
+  --good:#17824A; --bad-ink:#B3261E; --bad-tint:rgba(235,50,50,.30); --bad-cell:rgba(235,50,50,.16);
+  --focus:#C77A00; --btn:#1D1B2E; --btn-ink:#F5F4F8;
+  --num:"Shippori Mincho B1", "Hiragino Mincho ProN", "Yu Mincho", Georgia, serif;
+  --ui:"Zen Kaku Gothic New", "Hiragino Sans", system-ui, -apple-system, "Segoe UI", sans-serif;
+  box-sizing:border-box;
+  padding-top:env(safe-area-inset-top,0px); padding-bottom:env(safe-area-inset-bottom,0px);
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    color-scheme: dark;
+    --paper:#121119; --panel:#1A1924; --ink:#E7E5F0; --muted:#9A97AE; --rule:#2E2C3D;
+    --grid:#2C2A3A; --land:#1C1B27; --hover:#24232F;
+    --loop:#ABA6F5; --xmark:#77738C; --pearl-ring:#E7E5F0; --pearl-fill:#1C1B27; --pearl-black:#E7E5F0;
+    --good:#4CC883; --bad-ink:#FF7B70; --bad-tint:rgba(255,70,70,.32); --bad-cell:rgba(255,70,70,.16);
+    --focus:#F0B44C; --btn:#E7E5F0; --btn-ink:#121119;
+  }
+}
+:root[data-theme="dark"]{
+  color-scheme: dark;
+  --paper:#121119; --panel:#1A1924; --ink:#E7E5F0; --muted:#9A97AE; --rule:#2E2C3D;
+  --grid:#2C2A3A; --land:#1C1B27; --hover:#24232F;
+  --loop:#ABA6F5; --xmark:#77738C; --pearl-ring:#E7E5F0; --pearl-fill:#1C1B27; --pearl-black:#E7E5F0;
+  --good:#4CC883; --bad-ink:#FF7B70; --bad-tint:rgba(255,70,70,.32); --bad-cell:rgba(255,70,70,.16);
+  --focus:#F0B44C; --btn:#E7E5F0; --btn-ink:#121119;
+}
+body.cb{ --good:#0072B2; --bad-ink:#D55E00; --bad-tint:rgba(230,159,0,.55); --bad-cell:rgba(230,159,0,.22); }
+@media (prefers-color-scheme: dark){ :root:not([data-theme="light"]) body.cb{ --good:#56B4E9; --bad-ink:#F0A030; --bad-tint:rgba(240,160,40,.5); } }
+:root[data-theme="dark"] body.cb{ --good:#56B4E9; --bad-ink:#F0A030; --bad-tint:rgba(240,160,40,.5); }
+
+html{ height:100%; }
+body{ margin:0; min-height:100%; background:var(--paper); color:var(--ink); font-family:var(--ui); font-size:16px; line-height:1.55; }
+.wrap{ max-width:1040px; margin:0 auto; padding:28px 20px 40px; display:grid; grid-template-columns:290px 1fr; gap:40px; align-items:start; }
+header h1{ font-family:var(--num); font-weight:800; font-size:44px; line-height:1; margin:0; letter-spacing:.01em; }
+header .kana{ font-family:var(--num); font-weight:600; font-size:15px; color:var(--muted); margin:8px 0 0; }
+header p.tag{ margin:14px 0 0; color:var(--muted); max-width:30ch; }
+.side{ display:flex; flex-direction:column; gap:22px; }
+.group{ display:flex; flex-direction:column; gap:8px; }
+.group > .lbl{ font-size:14px; font-weight:700; }
+.seg{ display:flex; border:1.5px solid var(--ink); border-radius:6px; overflow:hidden; }
+.seg button{ flex:1; border:0; background:transparent; color:var(--ink); font:500 15px var(--ui); padding:8px 0; cursor:pointer; min-width:0; }
+.seg button + button{ border-left:1.5px solid var(--ink); }
+.seg button[aria-pressed="true"]{ background:var(--ink); color:var(--panel); }
+.seg button:hover:not([aria-pressed="true"]){ background:var(--hover); }
+.btn{ font:700 15px var(--ui); border-radius:6px; padding:10px 14px; cursor:pointer; border:1.5px solid var(--ink); background:transparent; color:var(--ink); }
+.btn.primary{ background:var(--btn); color:var(--btn-ink); }
+.btn:hover{ filter:brightness(1.08); }
+.btn:disabled,.seg button:disabled{ opacity:.45; cursor:default; }
+button:focus-visible,.board:focus-visible,summary:focus-visible,input:focus-visible + .sw{ outline:3px solid var(--focus); outline-offset:2px; }
+.toggle{ display:flex; align-items:center; gap:10px; cursor:pointer; font-size:15px; user-select:none; }
+.toggle input{ position:absolute; opacity:0; width:1px; height:1px; }
+.sw{ width:38px; height:22px; border-radius:11px; background:var(--rule); position:relative; flex:none; transition:background .15s; }
+.sw::after{ content:""; position:absolute; top:3px; left:3px; width:16px; height:16px; border-radius:50%; background:var(--panel); transition:transform .15s; }
+.toggle input:checked + .sw{ background:var(--loop); }
+.toggle input:checked + .sw::after{ transform:translateX(16px); }
+details{ border-top:1px solid var(--rule); padding-top:14px; font-size:15px; }
+summary{ cursor:pointer; font-weight:700; }
+details ul{ padding-left:18px; margin:10px 0 0; }
+details li{ margin:4px 0; }
+details p{ margin:10px 0 0; color:var(--muted); }
+kbd{ font:500 13px var(--ui); border:1px solid var(--rule); border-bottom-width:2px; border-radius:4px; padding:0 5px; background:var(--panel); }
+
+.main{ display:flex; flex-direction:column; align-items:center; gap:14px; min-width:0; }
+.meta{ width:100%; max-width:560px; display:flex; justify-content:space-between; align-items:baseline; font-size:15px; color:var(--muted); }
+.meta strong{ color:var(--ink); }
+.timer{ font-variant-numeric:tabular-nums; }
+.board-wrap{ position:relative; width:100%; max-width:560px; }
+.board{ display:block; width:100%; height:auto; touch-action:none; user-select:none; -webkit-user-select:none; border-radius:3px; cursor:crosshair; }
+.board .bg{ fill:var(--land); }
+.board .gl{ stroke:var(--grid); stroke-width:.025; }
+.board .frame{ fill:none; stroke:var(--ink); stroke-width:.06; }
+.board .seg-line{ stroke:var(--loop); stroke-width:.15; stroke-linecap:round; }
+.board .badg{ opacity:.3; }
+.board .seg-bad{ stroke:var(--bad-ink); stroke-width:.55; stroke-linecap:round; }
+body.cb .board .badg{ opacity:.5; }
+.board .cell-bad{ fill:var(--bad-cell); }
+body.cb .board .cell-bad{ fill:url(#hatch); }
+.board .x{ stroke:var(--xmark); stroke-width:.05; stroke-linecap:round; }
+.board .pw{ fill:var(--pearl-fill); stroke:var(--pearl-ring); stroke-width:.065; }
+.board .pb{ fill:var(--pearl-black); }
+.board .pw.ok{ stroke:var(--good); stroke-width:.1; }
+.board .pb.ok{ fill:var(--good); }
+.board .pw.err{ stroke:var(--bad-ink); stroke-width:.1; }
+.board .pb.err{ fill:var(--bad-ink); }
+.board .ring{ fill:none; stroke-width:.05; }
+.board .ring.ok{ stroke:var(--good); }
+.board .ring.err{ stroke:var(--bad-ink); stroke-dasharray:.1 .08; }
+.board .cur{ fill:none; stroke:var(--focus); stroke-width:.06; }
+.board:not(:focus-visible) .cur{ display:none; }
+
+.overlay{ position:absolute; inset:0; display:none; align-items:center; justify-content:center; flex-direction:column; gap:12px;
+  background:color-mix(in srgb, var(--paper) 82%, transparent); font-weight:500; text-align:center; padding:20px; }
+.overlay.on{ display:flex; }
+.spin{ width:28px; height:28px; border-radius:50%; border:3px solid var(--rule); border-top-color:var(--loop); animation:sp .9s linear infinite; }
+@keyframes sp{ to{ transform:rotate(360deg); } }
+@media (prefers-reduced-motion:reduce){ .spin{ animation:none; } .sw,.sw::after{ transition:none; } }
+.actions{ width:100%; max-width:560px; display:flex; flex-wrap:wrap; gap:8px; }
+.actions .btn.primary{ flex:1 1 160px; }
+.msg{ width:100%; max-width:560px; min-height:1.6em; font-size:15px; }
+.msg.win{ color:var(--good); font-weight:700; }
+.msg.warn{ color:var(--bad-ink); }
+.msg.note{ color:var(--muted); }
+@media (max-width:820px){ .wrap{ grid-template-columns:1fr; gap:20px; padding:16px 14px 32px; }
+  .side{ display:contents; } .side > header{ order:0; } .main{ order:1; } .side > :not(header){ order:2; } }
+</style>
+</head>
+<body>
+<div class="wrap">
+  <aside class="side">
+    <header>
+      <h1>Masyu</h1>
+      <p class="kana">ましゅ</p>
+      <p class="tag">Draw one loop through every pearl.</p>
+    </header>
+    <div class="group">
+      <span class="lbl" id="sizeLbl">Grid size</span>
+      <div class="seg" id="sizes" role="group" aria-labelledby="sizeLbl"></div>
+    </div>
+    <div class="group">
+      <span class="lbl" id="diffLbl">Difficulty</span>
+      <div class="seg" id="diffs" role="group" aria-labelledby="diffLbl">
+        <button data-d="easy">Easy</button><button data-d="medium">Medium</button><button data-d="hard">Hard</button>
+      </div>
+    </div>
+    <button class="btn primary" id="newBtn">New puzzle</button>
+    <div class="group">
+      <label class="toggle"><input type="checkbox" id="cbToggle"><span class="sw"></span>Colorblind mode</label>
+      <label class="toggle"><input type="checkbox" id="liveToggle"><span class="sw"></span>Flag branches as I draw</label>
+    </div>
+    <details>
+      <summary>How to play</summary>
+      <ul>
+        <li>Draw a single closed loop through the centers of cells. It moves side to side or up and down, and never branches or crosses itself.</li>
+        <li>The loop passes through every pearl.</li>
+        <li>On a white pearl the loop goes straight, and it turns in the cell just before or just after the pearl, or both.</li>
+        <li>On a black pearl the loop turns, then runs straight through the next cell on both sides.</li>
+      </ul>
+      <ul>
+        <li>Drag from cell to cell to draw. Drag along an existing line to erase it.</li>
+        <li>Tap the gap between two cells to cycle line, X, empty. Right-click a gap to place an X where you know the loop doesn’t go.</li>
+        <li>Keyboard: arrows move, <kbd>Shift</kbd>+arrow draws or erases, <kbd>Alt</kbd>+arrow places an X, <kbd>Ctrl</kbd>+<kbd>Z</kbd> undoes.</li>
+      </ul>
+      <p>A pearl turns green once the loop around it follows its rule.</p>
+    </details>
+  </aside>
+  <main class="main">
+    <div class="meta"><span id="metaTxt"><strong>Loading</strong></span><span class="timer" id="timer">0:00</span></div>
+    <div class="board-wrap">
+      <svg class="board" id="board" tabindex="0" role="img" aria-label="Masyu board"></svg>
+      <div class="overlay" id="overlay"><div class="spin"></div><div id="overlayTxt">Building a puzzle</div></div>
+    </div>
+    <div class="actions">
+      <button class="btn primary" id="checkBtn">Check solution</button>
+      <button class="btn" id="undoBtn">Undo</button>
+      <button class="btn" id="redoBtn">Redo</button>
+      <button class="btn" id="clearBtn">Clear</button>
+      <button class="btn" id="revealBtn">Show solution</button>
+    </div>
+    <div class="msg note" id="msg" role="status" aria-live="polite"></div>
+  </main>
+</div>
+<script>
+// ===== Masyu engine: loop generator + logical solver/grader =====
+const MS = (() => {
+  const rnd=n=>Math.floor(Math.random()*n);
+  function shuffle(a){ for(let i=a.length-1;i>0;i--){const j=rnd(i+1);[a[i],a[j]]=[a[j],a[i]];} return a; }
+
+  // geometry shared by solver, generator and UI
+  function geom(W,H){
+    const N=W*H, Hn=(W-1)*H, E=Hn+W*(H-1);
+    const cellE=[], edgeCells=new Array(E);
+    for(let y=0;y<H;y++) for(let x=0;x<W;x++){
+      const L = x>0 ? y*(W-1)+x-1 : -1, R = x<W-1 ? y*(W-1)+x : -1;
+      const U = y>0 ? Hn+(y-1)*W+x : -1, D = y<H-1 ? Hn+y*W+x : -1;
+      cellE.push([L,R,U,D]);
+    }
+    for(let y=0;y<H;y++) for(let x=0;x<W-1;x++) edgeCells[y*(W-1)+x]=[y*W+x,y*W+x+1];
+    for(let y=0;y<H-1;y++) for(let x=0;x<W;x++) edgeCells[Hn+y*W+x]=[y*W+x,(y+1)*W+x];
+    // neighbour cell in direction d (0 L,1 R,2 U,3 D) or -1
+    const step=(i,d)=>{ const x=i%W,y=(i/W)|0;
+      if(d===0) return x>0?i-1:-1; if(d===1) return x<W-1?i+1:-1; if(d===2) return y>0?i-W:-1; return y<H-1?i+W:-1; };
+    return {W,H,N,Hn,E,cellE,edgeCells,step};
+  }
+  const OPP=[1,0,3,2], PERP=[[2,3],[2,3],[0,1],[0,1]];
+
+  // ---------- rule checks on a complete loop (also used by the UI) ----------
+  function cellShape(g,lines,i){ // returns {deg, dirs:[...]}
+    const d=[]; for(let k=0;k<4;k++){ const e=g.cellE[i][k]; if(e>=0&&lines[e]===1) d.push(k); } return d;
+  }
+  const isStraight=d=>d.length===2&&OPP[d[0]]===d[1];
+  const isTurn=d=>d.length===2&&OPP[d[0]]!==d[1];
+  function pearlOK(g,lines,pearls,i){
+    const d=cellShape(g,lines,i);
+    if(pearls[i]===1){
+      if(!isStraight(d)) return false;
+      return d.some(k=>{ const n=g.step(i,k); return isTurn(cellShape(g,lines,n)); });
+    }
+    if(pearls[i]===2){
+      if(!isTurn(d)) return false;
+      return d.every(k=>{ const n=g.step(i,k); const dn=cellShape(g,lines,n); return isStraight(dn)&&dn.includes(k); });
+    }
+    return true;
+  }
+
+  // ---------- solver ----------
+  function makeSolver(W,H,pearls){
+    const g=geom(W,H), {N,E,cellE,edgeCells,step}=g;
+    const pearlCells=[]; for(let i=0;i<N;i++) if(pearls[i]) pearlCells.push(i);
+    const parent=new Int32Array(N);
+    const find=a=>{ while(parent[a]!==a){ parent[a]=parent[parent[a]]; a=parent[a]; } return a; };
+
+    function tier1(c){
+      let total=0;
+      const get=e=> e<0?0:c[e];
+      for(let iter=0;iter<500;iter++){
+        let bad=false; const pend=new Int8Array(E).fill(-1), plist=[];
+        const set=(e,v)=>{ if(e<0){ if(v===1) bad=true; return; } if(c[e]!==-1){ if(c[e]!==v) bad=true; return; }
+          if(pend[e]===-1){pend[e]=v;plist.push(e);} else if(pend[e]!==v) bad=true; };
+        let U=0; for(let e=0;e<E;e++) if(c[e]===-1) U++;
+        if(U===0) return validate(c)?total:-1;
+        // degree
+        for(let i=0;i<N;i++){ const es=cellE[i]; let l=0,u=0; for(const e of es){ if(e<0) continue; if(c[e]===1)l++; else if(c[e]===-1)u++; }
+          if(l>2) return -1;
+          if(pearls[i]&&l+u<2) return -1;
+          if(l===2){ for(const e of es) if(e>=0&&c[e]===-1) set(e,0); }
+          else if(l===1){ if(u===0) return -1; if(u===1) for(const e of es) if(e>=0&&c[e]===-1) set(e,1); }
+          else { if(pearls[i]){ if(u===2) for(const e of es) if(e>=0&&c[e]===-1) set(e,1); }
+                 else if(u===1) for(const e of es) if(e>=0&&c[e]===-1) set(e,0); }
+        }
+        // pearls
+        for(const i of pearlCells){ const [l,r,u,d]=cellE[i];
+          if(pearls[i]===1){
+            const a=step(i,0), b=step(i,1), p=step(i,2), q=step(i,3);
+            let hImp = l<0||r<0||get(l)===0||get(r)===0||get(u)===1||get(d)===1;
+            let vImp = u<0||d<0||get(u)===0||get(d)===0||get(l)===1||get(r)===1;
+            if(!hImp && get(cellE[a][0])===1 && get(cellE[b][1])===1) hImp=true;
+            if(!vImp && get(cellE[p][2])===1 && get(cellE[q][3])===1) vImp=true;
+            if(hImp&&vImp) return -1;
+            if(vImp){ set(l,1); set(r,1); set(u,0); set(d,0);
+              if(get(cellE[a][0])===1) set(cellE[b][1],0); if(get(cellE[b][1])===1) set(cellE[a][0],0); }
+            if(hImp){ set(u,1); set(d,1); set(l,0); set(r,0);
+              if(get(cellE[p][2])===1) set(cellE[q][3],0); if(get(cellE[q][3])===1) set(cellE[p][2],0); }
+          } else {
+            for(let k=0;k<4;k++){ const e=cellE[i][k]; if(e<0) continue; const n=step(i,k);
+              const ne=cellE[n][k], pp=PERP[k];
+              const legImp = ne<0 || get(ne)===0 || get(cellE[n][pp[0]])===1 || get(cellE[n][pp[1]])===1 || pearls[n]===2;
+              if(legImp) set(e,0);
+              if(get(e)===1){ set(ne,1); set(cellE[n][pp[0]],0); set(cellE[n][pp[1]],0); }
+            }
+            for(const [x,y] of [[l,r],[u,d]]){
+              if(get(x)===1&&get(y)===1) return -1;
+              if(get(x)===0&&get(y)===0) return -1;
+              if(get(x)===1) set(y,0); if(get(y)===1) set(x,0);
+              if(get(x)===0) set(y,1); if(get(y)===0) set(x,1);
+            }
+          }
+        }
+        // loop closure
+        for(let i=0;i<N;i++) parent[i]=i;
+        let lineCount=0;
+        for(let e=0;e<E;e++) if(c[e]===1){ lineCount++; const [a,b]=edgeCells[e]; const ra=find(a), rb=find(b); if(ra!==rb) parent[ra]=rb; }
+        if(lineCount){
+          const roots=new Map(); // root -> {edges, open}
+          for(let e=0;e<E;e++) if(c[e]===1){ const r=find(edgeCells[e][0]); roots.set(r,(roots.get(r)||0)+1); }
+          let closedRoot=-1;
+          for(const [r,cnt] of roots){ // a component is a cycle iff #edges == #cells
+            let cells=0; for(let i=0;i<N;i++) if(find(i)===r && cellE[i].some(e=>e>=0&&c[e]===1)) cells++;
+            if(cells===cnt){ closedRoot=r; }
+          }
+          if(closedRoot>=0){
+            if(roots.size>1) return -1;
+            for(const p of pearlCells) if(find(p)!==closedRoot || !cellE[p].some(e=>e>=0&&c[e]===1)) return -1;
+            for(let e=0;e<E;e++) if(c[e]===-1) set(e,0);
+          } else {
+            for(let e=0;e<E;e++) if(c[e]===-1){ const [a,b]=edgeCells[e]; const r=find(a);
+              if(r!==find(b)) continue;
+              if(!cellE[a].some(x=>x>=0&&c[x]===1)) continue; // isolated cells are their own roots
+              let incomplete = roots.size>1;
+              if(!incomplete) for(const p of pearlCells) if(find(p)!==r || !cellE[p].some(x=>x>=0&&c[x]===1)){ incomplete=true; break; }
+              if(incomplete) set(e,0);
+            }
+          }
+        }
+        if(bad) return -1;
+        for(const e of plist) c[e]=pend[e];
+        total+=plist.length; if(!plist.length) return total;
+      }
+      return total;
+    }
+
+    const seen=new Int32Array(N); let stamp=0;
+    function tier2(c){
+      let bad=false; const pend=new Int8Array(E).fill(-1), plist=[];
+      const set=(e,v)=>{ if(c[e]!==-1){ if(c[e]!==v) bad=true; return; } if(pend[e]===-1){pend[e]=v;plist.push(e);} else if(pend[e]!==v) bad=true; };
+      // parity across every straight cut
+      for(let x=0;x<W-1;x++){ let on=0,unk=[]; for(let y=0;y<H;y++){ const e=y*(W-1)+x; if(c[e]===1)on++; else if(c[e]===-1)unk.push(e); }
+        if(!unk.length&&on%2) return -1; if(unk.length===1) set(unk[0],on%2); }
+      for(let y=0;y<H-1;y++){ let on=0,unk=[]; for(let x=0;x<W;x++){ const e=g.Hn+y*W+x; if(c[e]===1)on++; else if(c[e]===-1)unk.push(e); }
+        if(!unk.length&&on%2) return -1; if(unk.length===1) set(unk[0],on%2); }
+      // connectivity: any unknown bridge that separates required cells must be a line
+      const isReq=new Uint8Array(N); let totalReq=0, root=-1;
+      for(let i=0;i<N;i++) if(pearls[i]||cellE[i].some(e=>e>=0&&c[e]===1)){ isReq[i]=1; totalReq++; if(root<0) root=i; }
+      if(totalReq>1){
+        const tin=new Int32Array(N).fill(-1), low=new Int32Array(N), sub=new Int32Array(N), pe=new Int32Array(N).fill(-1);
+        let timer=0; const stack=[[root,0]]; tin[root]=low[root]=timer++; sub[root]=isReq[root];
+        let reached=0;
+        while(stack.length){
+          const top=stack[stack.length-1], a=top[0];
+          if(top[1]<4){ const e=cellE[a][top[1]++]; if(e<0||c[e]===0||e===pe[a]) continue;
+            const [p,q]=edgeCells[e]; const b=p===a?q:p;
+            if(tin[b]<0){ tin[b]=low[b]=timer++; pe[b]=e; sub[b]=isReq[b]; stack.push([b,0]); }
+            else low[a]=Math.min(low[a],tin[b]);
+          } else {
+            stack.pop();
+            if(stack.length){ const par=stack[stack.length-1][0];
+              low[par]=Math.min(low[par],low[a]); sub[par]+=sub[a];
+              if(low[a]>tin[par] && c[pe[a]]===-1 && sub[a]>0 && sub[a]<totalReq) set(pe[a],1); }
+          }
+        }
+        if(sub[root]<totalReq) return -1;
+      }
+      if(bad) return -1; for(const e of plist) c[e]=pend[e]; return plist.length;
+    }
+
+    function prop(c,maxTier){
+      for(let k=0;k<200;k++){
+        if(tier1(c)<0) return -1;
+        if(maxTier<2||!c.includes(-1)) return 0;
+        const r=tier2(c); if(r<0) return -1; if(r===0) return 0;
+      }
+      return 0;
+    }
+    function tier3(c,inner){
+      let ch=0;
+      for(let e=0;e<E;e++) if(c[e]===-1){
+        const [a,b]=edgeCells[e];
+        const near=cellE[a].some(x=>x>=0&&c[x]===1)||cellE[b].some(x=>x>=0&&c[x]===1)||pearls[a]||pearls[b];
+        if(!near) continue;
+        const t=Int8Array.from(c); t[e]=1;
+        if(prop(t,inner)<0){ c[e]=0; ch++; if(tier1(c)<0) return -1; break; }
+        const f=Int8Array.from(c); f[e]=0;
+        if(prop(f,inner)<0){ c[e]=1; ch++; if(tier1(c)<0) return -1; break; }
+      }
+      return ch;
+    }
+    function validate(c){
+      for(let e=0;e<E;e++) if(c[e]!==0&&c[e]!==1) return false;
+      let edges=0, start=-1;
+      for(let i=0;i<N;i++){ const d=cellShape(g,c,i).length; if(d!==0&&d!==2) return false; if(pearls[i]&&d!==2) return false; if(d&&start<0) start=i; }
+      for(let e=0;e<E;e++) if(c[e]===1) edges++;
+      if(!edges) return false;
+      for(const p of pearlCells) if(!pearlOK(g,c,pearls,p)) return false;
+      // single cycle: walk it
+      let prev=-1, cur=start, steps=0;
+      do{ const d=cellShape(g,c,cur); let nx=-1; for(const k of d){ const n=step(cur,k); if(n!==prev){ nx=n; break; } }
+        if(nx<0) nx=step(cur,d[0]); prev=cur; cur=nx; steps++; } while(cur!==start && steps<=E);
+      return steps===edges;
+    }
+    function grade(maxLevel=3){
+      const c=new Int8Array(E).fill(-1); let level=1;
+      for(let k=0;k<2000;k++){
+        if(tier1(c)<0) return {ok:false};
+        if(!c.includes(-1)) return validate(c)?{ok:true,level,sol:c}:{ok:false};
+        if(maxLevel<2) return {ok:false};
+        let r=tier2(c); if(r<0) return {ok:false}; if(r>0){ level=Math.max(level,2); continue; }
+        if(maxLevel<3) return {ok:false};
+        r=tier3(c,1); if(r<0) return {ok:false};
+        if(r===0){ r=tier3(c,2); if(r<0) return {ok:false}; }
+        if(r>0){ level=3; continue; }
+        return {ok:false,stuck:true,c};
+      }
+      return {ok:false};
+    }
+    return {grade,validate};
+  }
+
+  // ---------- loop generator: boundary of a hole-free, pinch-free set of faces ----------
+  function loopKit(W,H){
+    const g=geom(W,H), FW=W-1, FH=H-1, F=FW*FH;
+    const face=(S,x,y)=> (x<0||y<0||x>=FW||y>=FH)?0:S[y*FW+x];
+    function loopEdges(S){
+      const L=new Int8Array(g.E);
+      for(let y=0;y<H;y++) for(let x=0;x<W-1;x++) L[y*(W-1)+x]= face(S,x,y-1)!==face(S,x,y) ?1:0;
+      for(let y=0;y<H-1;y++) for(let x=0;x<W;x++) L[g.Hn+y*W+x]= face(S,x-1,y)!==face(S,x,y) ?1:0;
+      return L;
+    }
+    function single(L){
+      let edges=0, start=-1;
+      for(let i=0;i<g.N;i++){ const d=cellShape(g,L,i).length; if(d!==0&&d!==2) return false; if(d&&start<0) start=i; }
+      if(start<0) return false;
+      for(let e=0;e<g.E;e++) edges+=L[e];
+      let prev=-1,cur=start,steps=0;
+      do{ const d=cellShape(g,L,cur); let nx=-1; for(const k of d){ const n=g.step(cur,k); if(n!==prev){nx=n;break;} } if(nx<0) nx=g.step(cur,d[0]);
+        prev=cur; cur=nx; steps++; } while(cur!==start&&steps<=g.E);
+      return steps===edges;
+    }
+    function grow(frac,fat){
+      const S=new Uint8Array(F); S[rnd(F)]=1; let size=1; const target=Math.max(2,Math.round(frac*F));
+      for(let tries=0; size<target && tries<F*30; tries++){
+        const fr=[], fr2=[]; for(let f=0;f<F;f++) if(!S[f]){ const x=f%FW,y=(f/FW)|0; const k=face(S,x-1,y)+face(S,x+1,y)+face(S,x,y-1)+face(S,x,y+1); if(k===1) fr.push(f); else if(k>1) fr2.push(f); }
+        if(fr2.length && (Math.random()<fat || !fr.length)) fr.push(...fr2);
+        if(!fr.length) break;
+        const f=fr[rnd(fr.length)]; S[f]=1;
+        if(single(loopEdges(S))) size++; else S[f]=0;
+      }
+      return S;
+    }
+    // faces touching a cell (cell = corner of up to four faces)
+    function facesOfCell(i){ const x=i%W,y=(i/W)|0, out=[];
+      for(const [fx,fy] of [[x-1,y-1],[x,y-1],[x-1,y],[x,y]]) if(fx>=0&&fy>=0&&fx<FW&&fy<FH) out.push(fy*FW+fx); return out; }
+    return {g,F,loopEdges,single,grow,facesOfCell};
+  }
+  function fullPearls(g,loop){
+    const pearls=new Int8Array(g.N);
+    for(let i=0;i<g.N;i++){ pearls[i]=1; if(pearlOK(g,loop,pearls,i)) continue; pearls[i]=2; if(pearlOK(g,loop,pearls,i)) continue; pearls[i]=0; }
+    return pearls;
+  }
+  function unknownCount(r){ if(r.ok) return 0; if(!r.stuck) return 1e9; let k=0; for(const v of r.c) if(v===-1) k++; return k; }
+  const LEVEL={easy:1,medium:2,hard:3};
+  const FRAC={easy:[0.4,0.55],medium:[0.42,0.58],hard:[0.45,0.6]};
+
+  function* generate(W,H,diff){
+    const kit=loopKit(W,H), g=kit.g, target=LEVEL[diff]; let best=null;
+    for(let round=0; round<300; round++){
+      const [lo,hi]=FRAC[diff];
+      let S=kit.grow(lo+Math.random()*(hi-lo),0.1), loop=kit.loopEdges(S);
+      let pearls=fullPearls(g,loop), r=makeSolver(W,H,pearls).grade(target), sc=unknownCount(r);
+      yield;
+      // reshape the loop until the full set of pearls pins it down
+      for(let it=0; it<g.N*3 && sc>0; it++){
+        let f;
+        if(r.stuck && Math.random()<0.85){ const u=[]; for(let e=0;e<g.E;e++) if(r.c[e]===-1) u.push(e);
+          const e=u[rnd(u.length)]; const fs=kit.facesOfCell(g.edgeCells[e][rnd(2)]); f=fs[rnd(fs.length)]; }
+        else f=rnd(kit.F);
+        const S2=Uint8Array.from(S); S2[f]^=1; const L2=kit.loopEdges(S2);
+        if(!kit.single(L2)) continue;
+        const p2=fullPearls(g,L2), r2=makeSolver(W,H,p2).grade(target), s2=unknownCount(r2);
+        if(s2<=sc){ S=S2; loop=L2; pearls=p2; r=r2; sc=s2; }
+        if(it%2===0) yield;
+      }
+      if(sc>0) continue;
+      // strip pearls while the puzzle stays solvable at this difficulty
+      const cand=[]; for(let i=0;i<g.N;i++) if(pearls[i]) cand.push(i);
+      for(const i of shuffle(cand)){
+        const keep=pearls[i]; pearls[i]=0;
+        const t=makeSolver(W,H,pearls).grade(target);
+        if(t.ok) r=t; else pearls[i]=keep;
+        yield;
+      }
+      const out={W,H,pearls:Array.from(pearls),solution:Array.from(loop),level:r.level};
+      if(r.level===target) return out;
+      if(!best||r.level>best.level) best=out;
+      yield {best};
+    }
+    return best;
+  }
+  return {generate, loopKit, fullPearls, makeSolver, geom, pearlOK, cellShape, LEVEL};
+})();
+if(typeof module!=='undefined') module.exports=MS;
+
+</script>
+<script>
+(() => {
+  const $=id=>document.getElementById(id);
+  const board=$('board'), msgEl=$('msg');
+  const NONE=0, LINE=1, CROSS=2;
+  let W=7, H=7, diff='medium', puzzle=null, g=null, lines=[], solver=null;
+  let undo=[], redo=[], stroke=null, cur=0, generating=false, flags=null;
+  let solved=false, revealed=false, t0=0, tStop=null, tick=null;
+
+  // ---------- settings ----------
+  const sizes=$('sizes');
+  for(let n=5;n<=10;n++){ const b=document.createElement('button'); b.textContent=n; b.dataset.n=n; b.setAttribute('aria-label',n+' by '+n); sizes.appendChild(b); }
+  function syncSeg(){
+    sizes.querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed', +b.dataset.n===W));
+    $('diffs').querySelectorAll('button').forEach(b=>b.setAttribute('aria-pressed', b.dataset.d===diff));
+  }
+  sizes.addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||generating) return; W=H=+b.dataset.n; syncSeg(); newPuzzle(); });
+  $('diffs').addEventListener('click',e=>{ const b=e.target.closest('button'); if(!b||generating) return; diff=b.dataset.d; syncSeg(); newPuzzle(); });
+  $('newBtn').onclick=()=>{ if(!generating) newPuzzle(); };
+  try{ if(localStorage.getItem('ms-cb')==='1'){ $('cbToggle').checked=true; document.body.classList.add('cb'); } }catch(e){}
+  $('cbToggle').onchange=e=>{ document.body.classList.toggle('cb',e.target.checked); try{ localStorage.setItem('ms-cb',e.target.checked?'1':'0'); }catch(_){} };
+  $('liveToggle').onchange=()=>render();
+
+  // ---------- generation ----------
+  async function newPuzzle(){
+    generating=true; setBusy(true);
+    $('overlayTxt').textContent='Building a '+W+'×'+H+' '+diff+' puzzle';
+    const gen=MS.generate(W,H,diff), start=performance.now(); let res, best=null;
+    while(true){
+      const slice=performance.now();
+      while(performance.now()-slice<14){ res=gen.next(); if(res.done) break; if(res.value&&res.value.best) best=res.value.best; }
+      if(res.done||performance.now()-start>9000) break;
+      await new Promise(r=>setTimeout(r,0));
+    }
+    let p=res.done?res.value:best;
+    while(!p){ const g2=MS.generate(W,H,'easy'); let r; while(!(r=g2.next()).done); p=r.value; }
+    generating=false; setBusy(false); load(p);
+  }
+  function setBusy(on){ $('overlay').classList.toggle('on',on); document.querySelectorAll('button').forEach(b=>b.disabled=on); }
+
+  function load(p){
+    puzzle=p; W=p.W; H=p.H; g=MS.geom(W,H); solver=MS.makeSolver(W,H,Int8Array.from(p.pearls));
+    lines=new Array(g.E).fill(NONE); undo=[]; redo=[]; flags=null; solved=false; revealed=false; cur=0;
+    board.setAttribute('viewBox',`-0.06 -0.06 ${W+0.12} ${H+0.12}`);
+    const lvl=Object.keys(MS.LEVEL).find(k=>MS.LEVEL[k]===p.level);
+    $('metaTxt').innerHTML='<strong>'+W+'×'+H+'</strong> '+lvl;
+    setMsg(lvl===diff?'':'No '+diff+' puzzle turned up in time, so this one is rated '+lvl+'. Press New puzzle to try again.','note',true);
+    t0=performance.now(); tStop=null; clearInterval(tick); tick=setInterval(drawTime,500); drawTime();
+    render();
+  }
+  function drawTime(){ const s=Math.floor(((tStop??performance.now())-t0)/1000); $('timer').textContent=Math.floor(s/60)+':'+String(s%60).padStart(2,'0'); }
+  let msgSticky=false;
+  function setMsg(t,k,sticky){ msgEl.textContent=t; msgEl.className='msg '+(k||'note'); msgSticky=!!sticky; }
+
+  // ---------- analysis ----------
+  const asLoop=()=>Int8Array.from(lines,v=>v===LINE?1:0);
+  const degree=(L,i)=>g.cellE[i].reduce((k,e)=>k+(e>=0&&L[e]===1?1:0),0);
+  function pieces(L){ // connected groups of line segments
+    const lab=new Int32Array(g.N).fill(-1), out=[];
+    for(let i=0;i<g.N;i++) if(lab[i]<0&&degree(L,i)>0){
+      const cells=[i], edges=new Set(); lab[i]=out.length;
+      for(let k=0;k<cells.length;k++){ const a=cells[k];
+        for(const e of g.cellE[a]) if(e>=0&&L[e]===1){ edges.add(e); const [p,q]=g.edgeCells[e]; const b=p===a?q:p; if(lab[b]<0){lab[b]=out.length;cells.push(b);} } }
+      out.push({cells,edges:[...edges]});
+    }
+    return out;
+  }
+  function fullCheck(){
+    const L=asLoop(), pcs=pieces(L);
+    const badCells=new Set(), badEdges=new Set(), errPearl=new Set();
+    let ends=0, branches=0;
+    for(let i=0;i<g.N;i++){ const d=degree(L,i); if(d===1){ends++;badCells.add(i);} else if(d>2){branches++;badCells.add(i);} }
+    if(pcs.length>1){ const big=pcs.reduce((a,b)=>b.edges.length>a.edges.length?b:a); for(const p of pcs) if(p!==big) p.edges.forEach(e=>badEdges.add(e)); }
+    for(let i=0;i<g.N;i++) if(puzzle.pearls[i] && !MS.pearlOK(g,L,puzzle.pearls,i)) errPearl.add(i);
+    const ok=solver.validate(L);
+    return {ok,badCells,badEdges,errPearl,ends,branches,split:pcs.length>1?pcs.length:0,empty:pcs.length===0};
+  }
+
+  // ---------- render ----------
+  const NS='http://www.w3.org/2000/svg';
+  const ctr=i=>[i%W+0.5, ((i/W)|0)+0.5];
+  function render(){
+    const L=asLoop(); const live=$('liveToggle').checked;
+    let s=`<defs><pattern id="hatch" width=".2" height=".2" patternUnits="userSpaceOnUse" patternTransform="rotate(45)"><rect width=".1" height=".2" fill="var(--bad-tint)"/></pattern></defs>`;
+    s+=`<rect class="bg" x="0" y="0" width="${W}" height="${H}"/>`;
+    for(let x=1;x<W;x++) s+=`<line class="gl" x1="${x}" y1="0" x2="${x}" y2="${H}"/>`;
+    for(let y=1;y<H;y++) s+=`<line class="gl" x1="0" y1="${y}" x2="${W}" y2="${y}"/>`;
+    // flagged cells
+    const cellFlags=new Set(flags?flags.badCells:[]);
+    if(live) for(let i=0;i<g.N;i++) if(degree(L,i)>2) cellFlags.add(i);
+    for(const i of cellFlags){ s+=`<rect class="cell-bad" x="${i%W}" y="${(i/W)|0}" width="1" height="1"/>`; }
+    // underlay for flagged segments
+    if(flags&&flags.badEdges.size){ s+='<g class="badg">'; for(const e of flags.badEdges){ const [a,b]=g.edgeCells[e]; const [x1,y1]=ctr(a),[x2,y2]=ctr(b); s+=`<line class="seg-bad" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`; } s+='</g>'; }
+    for(let e=0;e<g.E;e++){ const [a,b]=g.edgeCells[e]; const [x1,y1]=ctr(a),[x2,y2]=ctr(b);
+      if(lines[e]===LINE) s+=`<line class="seg-line" x1="${x1}" y1="${y1}" x2="${x2}" y2="${y2}"/>`;
+      else if(lines[e]===CROSS){ const mx=(x1+x2)/2, my=(y1+y2)/2, r=.1; s+=`<path class="x" d="M${mx-r} ${my-r}L${mx+r} ${my+r}M${mx+r} ${my-r}L${mx-r} ${my+r}"/>`; } }
+    for(let i=0;i<g.N;i++){ const p=puzzle.pearls[i]; if(!p) continue; const [cx,cy]=ctr(i);
+      const ok=MS.pearlOK(g,L,puzzle.pearls,i), err=!ok&&flags&&flags.errPearl.has(i);
+      const st=ok?' ok':err?' err':'';
+      s+=`<circle class="${p===1?'pw':'pb'}${st}" cx="${cx}" cy="${cy}" r=".29"/>`;
+      if(st) s+=`<circle class="ring cbonly${st}" cx="${cx}" cy="${cy}" r=".42"/>`;
+    }
+    s+=`<rect class="frame" x="0" y="0" width="${W}" height="${H}"/>`;
+    s+=`<rect class="cur" x="${cur%W+0.06}" y="${((cur/W)|0)+0.06}" width=".88" height=".88" rx=".08"/>`;
+    board.innerHTML=s;
+    board.querySelectorAll('.cbonly').forEach(el=>el.style.display=document.body.classList.contains('cb')?'':'none');
+    $('undoBtn').disabled=generating||!undo.length; $('redoBtn').disabled=generating||!redo.length;
+    const nP=puzzle.pearls.filter(Boolean).length, nOk=puzzle.pearls.reduce((k,p,i)=>k+(p&&MS.pearlOK(g,L,puzzle.pearls,i)?1:0),0);
+    board.setAttribute('aria-label',`Masyu board, ${W} by ${H}, ${nOk} of ${nP} pearls satisfied`);
+  }
+  $('cbToggle').addEventListener('change',()=>render());
+
+  function afterEdit(){
+    flags=null;
+    if(!solved&&!revealed&&solver.validate(asLoop())){ solved=true; tStop=performance.now(); drawTime(); setMsg('Solved in '+$('timer').textContent+'. One loop, every pearl satisfied.','win'); }
+    else if(!msgSticky&&!msgEl.classList.contains('win')) setMsg('','note');
+    render();
+  }
+
+  // ---------- editing ----------
+  function setEdge(e,v){ if(e<0||lines[e]===v) return; stroke.push([e,lines[e],v]); lines[e]=v; }
+  function commit(){ if(stroke&&stroke.length){ undo.push(stroke); redo=[]; afterEdit(); } stroke=null; }
+  function edgeBetween(a,b){ for(let k=0;k<4;k++) if(g.step(a,k)===b) return g.cellE[a][k]; return -1; }
+  function pt(e){ const r=board.getBoundingClientRect(); const vb=board.viewBox.baseVal;
+    return [ (e.clientX-r.left)/r.width*vb.width+vb.x, (e.clientY-r.top)/r.height*vb.height+vb.y ]; }
+  function cellOf(fx,fy){ const x=Math.min(W-1,Math.max(0,Math.floor(fx))), y=Math.min(H-1,Math.max(0,Math.floor(fy))); return y*W+x; }
+  function nearEdge(fx,fy){
+    const x=Math.floor(fx), y=Math.floor(fy); if(x<0||y<0||x>=W||y>=H) return -1;
+    const u=fx-x, v=fy-y, i=y*W+x, T=.24;
+    const opts=[[u,0],[1-u,1],[v,2],[1-v,3]].filter(o=>o[0]<T).sort((a,b)=>a[0]-b[0]);
+    for(const [,k] of opts){ const e=g.cellE[i][k]; if(e>=0) return e; }
+    return -1;
+  }
+  let drag=null;
+  board.addEventListener('pointerdown',ev=>{
+    if(generating||!puzzle) return; ev.preventDefault(); board.focus({preventScroll:true});
+    const [fx,fy]=pt(ev); const c=cellOf(fx,fy); cur=c;
+    drag={cell:c, edge:nearEdge(fx,fy), moved:false, mode:null, right:ev.button===2};
+    stroke=[]; board.setPointerCapture(ev.pointerId); render();
+  });
+  board.addEventListener('pointermove',ev=>{
+    if(!drag||drag.right) return; const [fx,fy]=pt(ev); const target=cellOf(fx,fy);
+    let guard=0;
+    while(drag.cell!==target && guard++<40){
+      const ax=drag.cell%W, ay=(drag.cell/W)|0, tx=target%W, ty=(target/W)|0;
+      const next = Math.abs(tx-ax)>=Math.abs(ty-ay) ? drag.cell+Math.sign(tx-ax) : drag.cell+W*Math.sign(ty-ay);
+      const e=edgeBetween(drag.cell,next);
+      if(drag.mode===null) drag.mode = lines[e]===LINE ? 'erase' : 'draw';
+      setEdge(e, drag.mode==='draw' ? LINE : (lines[e]===LINE?NONE:lines[e]));
+      drag.cell=next; drag.moved=true;
+    }
+    if(drag.moved){ cur=drag.cell; flags=null; render(); }
+  });
+  const endDrag=()=>{
+    if(!drag) return;
+    if(!drag.moved && drag.edge>=0){ const e=drag.edge, s=lines[e];
+      setEdge(e, drag.right ? (s===CROSS?NONE:CROSS) : (s===NONE?LINE:s===LINE?CROSS:NONE)); }
+    drag=null; commit(); render();
+  };
+  board.addEventListener('pointerup',endDrag); board.addEventListener('pointercancel',endDrag);
+  board.addEventListener('contextmenu',e=>e.preventDefault());
+
+  board.addEventListener('keydown',ev=>{
+    if(generating||!puzzle) return;
+    const mod=ev.ctrlKey||ev.metaKey;
+    if(mod&&ev.key.toLowerCase()==='z'){ ev.shiftKey?doRedo():doUndo(); ev.preventDefault(); return; }
+    if(mod&&ev.key.toLowerCase()==='y'){ doRedo(); ev.preventDefault(); return; }
+    const dir={ArrowLeft:0,ArrowRight:1,ArrowUp:2,ArrowDown:3}[ev.key];
+    if(dir===undefined) return;
+    ev.preventDefault();
+    const n=g.step(cur,dir); if(n<0) return; const e=g.cellE[cur][dir];
+    if(ev.shiftKey){ stroke=[]; setEdge(e, lines[e]===LINE?NONE:LINE); commit(); cur=n; }
+    else if(ev.altKey){ stroke=[]; setEdge(e, lines[e]===CROSS?NONE:CROSS); commit(); }
+    else cur=n;
+    render();
+  });
+
+  function doUndo(){ const s=undo.pop(); if(!s) return; for(let k=s.length-1;k>=0;k--) lines[s[k][0]]=s[k][1]; redo.push(s); afterEdit(); }
+  function doRedo(){ const s=redo.pop(); if(!s) return; for(const [e,,v] of s) lines[e]=v; undo.push(s); afterEdit(); }
+  $('undoBtn').onclick=doUndo; $('redoBtn').onclick=doRedo;
+  $('clearBtn').onclick=()=>{ stroke=[]; for(let e=0;e<g.E;e++) setEdge(e,NONE); revealed=false; commit(); render(); };
+  $('revealBtn').onclick=()=>{
+    stroke=[]; for(let e=0;e<g.E;e++) setEdge(e, puzzle.solution[e]?LINE:NONE);
+    revealed=true; if(!solved){ tStop=performance.now(); drawTime(); }
+    commit(); render(); setMsg('Solution shown. Undo to return to your own attempt.','note');
+  };
+  $('checkBtn').onclick=()=>{
+    const r=fullCheck(); flags=r; render();
+    if(r.ok&&revealed){ setMsg('This is the solution. Press New puzzle for another one.','note'); return; }
+    if(r.ok){ if(!solved){ solved=true; tStop=performance.now(); drawTime(); } setMsg('Solved in '+$('timer').textContent+'. One loop, every pearl satisfied.','win'); return; }
+    const pl=(n,a,b)=>n+' '+(n===1?a:b), parts=[];
+    if(r.empty) parts.push('no line drawn yet');
+    if(r.ends) parts.push(pl(r.ends,'dead end','dead ends'));
+    if(r.branches) parts.push(pl(r.branches,'branch','branches'));
+    if(r.split) parts.push('the line is in '+r.split+' separate pieces');
+    if(r.errPearl.size) parts.push(pl(r.errPearl.size,'pearl isn’t','pearls aren’t')+' satisfied yet');
+    setMsg('Not yet: '+parts.join('; ')+'.','warn');
+  };
+
+  syncSeg(); newPuzzle();
+})();
+</script>
+</body>
+</html>
